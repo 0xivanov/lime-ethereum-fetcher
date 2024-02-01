@@ -1,0 +1,39 @@
+# Compiled binary executables
+*.exe
+*.out
+
+# Dependency directories
+vendor/
+node_modules/
+
+# Compiled Object files, Static and Dynamic libs
+*.o
+*.a
+
+# Logs and databases
+*.log
+*.sql
+
+# Temporary files
+*.tmp
+*.swp
+*~
+
+# IDE or editor specific files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Compiled Go binary
+*.test
+
+# Environment variables file (e.g., .env)
+.env
+
+# Ignore any files specific to your development environment
+# For example, if you're using macOS:
+.DS_Store
+
+# Ignore binary files if any
+*.bin
