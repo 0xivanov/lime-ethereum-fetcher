@@ -5,7 +5,7 @@ postgres:
 	docker exec -it postgres15 psql
 
 createdb:
-	docker exec -it postgres15 createdb --username=root --owner=root lime-ethereum-fetcher
+	docker exec -it postgres15 createdb --username=root --owner=root postgres
 
 dropdb:
-	docker exec -it postgres15 dropdb lime-ethereum-fetcher
+	docker exec -it postgres15 dropdb postgres
