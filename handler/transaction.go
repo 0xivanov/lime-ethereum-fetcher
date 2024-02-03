@@ -10,20 +10,18 @@ import (
 	"github.com/0xivanov/lime-ethereum-fetcher-go/model"
 	"github.com/0xivanov/lime-ethereum-fetcher-go/repo"
 	"github.com/gin-gonic/gin"
-	"github.com/go-playground/validator"
 	"github.com/hashicorp/go-hclog"
 )
 
 type Transaction struct {
 	l          hclog.Logger
-	v          *validator.Validate
-	tr         *repo.Transaction
+	tr         repo.TransactionInterface
 	ethNodeUrl string
 }
 
-func NewTransaction(l hclog.Logger, v *validator.Validate, tr *repo.Transaction) *Transaction {
+func NewTransaction(l hclog.Logger, tr repo.TransactionInterface) *Transaction {
 	ethNodeUrl := os.Getenv("ETH_NODE_URL")
-	return &Transaction{l, v, tr, ethNodeUrl}
+	return &Transaction{l, tr, ethNodeUrl}
 }
 
 func (t *Transaction) GetTransactionsWithHashes(ctx *gin.Context) {

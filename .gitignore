@@ -9,7 +9,7 @@ node_modules/
 # Compiled Object files, Static and Dynamic libs
 *.o
 *.a
-
+mocks/
 # Logs and databases
 *.log
 *.sql

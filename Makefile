@@ -9,3 +9,6 @@ createdb:
 
 dropdb:
 	docker exec -it postgres15 dropdb postgres
+
+createMocks:
+	mockgen -source=repo/transaction.go  -destination=./mocks/transaction_repo_mock.go mock TransactionMock

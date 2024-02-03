@@ -9,6 +9,12 @@ import (
 	"gorm.io/gorm"
 )
 
+//go:generate mockgen -destination=./mocks/transaction_mock.go mock TransactionMock
+type TransactionInterface interface {
+	SaveTransactions(ctx context.Context, transactions *[]model.Transaction) error
+	GetTransactions(ctx context.Context) ([]model.Transaction, error)
+}
+
 type Transaction struct {
 	db *gorm.DB
 	l  hclog.Logger

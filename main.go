@@ -8,7 +8,6 @@ import (
 	"github.com/0xivanov/lime-ethereum-fetcher-go/db"
 	"github.com/0xivanov/lime-ethereum-fetcher-go/repo"
 	"github.com/gin-gonic/gin"
-	"github.com/go-playground/validator"
 	"github.com/hashicorp/go-hclog"
 	"github.com/joho/godotenv"
 )
@@ -28,6 +27,6 @@ func main() {
 	transactionRepo := repo.NewTransaction(dbConnection.GetDb(), l)
 
 	// create and start the app
-	app := application.New(gin.Default(), port, dbConnection, l, validator.New(), transactionRepo)
+	app := application.New(gin.Default(), port, dbConnection, l, transactionRepo)
 	app.Start()
 }

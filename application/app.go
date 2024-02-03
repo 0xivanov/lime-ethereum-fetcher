@@ -12,7 +12,6 @@ import (
 	"github.com/0xivanov/lime-ethereum-fetcher-go/handler"
 	"github.com/0xivanov/lime-ethereum-fetcher-go/repo"
 	"github.com/gin-gonic/gin"
-	"github.com/go-playground/validator"
 	"github.com/hashicorp/go-hclog"
 )
 
@@ -22,9 +21,9 @@ type App struct {
 	l hclog.Logger
 }
 
-func New(r *gin.Engine, p string, db *db.Database, l hclog.Logger, v *validator.Validate, tr *repo.Transaction) *App {
+func New(r *gin.Engine, p string, db *db.Database, l hclog.Logger, tr repo.TransactionInterface) *App {
 	app := &App{r, p, l}
-	app.loadRoutes(handler.NewTransaction(l, v, tr), handler.NewUser(l, v))
+	app.loadRoutes(handler.NewTransaction(l, tr), handler.NewUser(l))
 	return app
 }
 
