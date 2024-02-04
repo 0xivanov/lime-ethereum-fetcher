@@ -2,7 +2,6 @@ package db
 
 import (
 	"github.com/0xivanov/lime-ethereum-fetcher-go/model"
-	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
@@ -10,8 +9,8 @@ type Database struct {
 	db *gorm.DB
 }
 
-func NewDatabse(dbConnectionString string) (*Database, error) {
-	db, err := gorm.Open(postgres.Open(dbConnectionString), &gorm.Config{})
+func NewDatabse(dialector gorm.Dialector) (*Database, error) {
+	db, err := gorm.Open(dialector, &gorm.Config{})
 	if err != nil {
 		return nil, err
 	}

@@ -44,7 +44,6 @@ func (t *Transaction) GetTransactionsWithHashes(ctx *gin.Context) {
 		return
 	}
 
-	// return the transactions
 	t.l.Info("Retrieved transactions", "number of transactions", len(*transactions))
 	ctx.JSON(http.StatusOK, gin.H{"transactions": transactions})
 }

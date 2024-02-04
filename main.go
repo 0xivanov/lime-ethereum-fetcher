@@ -10,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/hashicorp/go-hclog"
 	"github.com/joho/godotenv"
+	"gorm.io/driver/postgres"
 )
 
 func main() {
@@ -23,7 +24,7 @@ func main() {
 
 	// initialize logger, db and repos
 	l := hclog.Default()
-	dbConnection, err := db.NewDatabse(dbConnectionString)
+	dbConnection, err := db.NewDatabse(postgres.Open(dbConnectionString))
 	transactionRepo := repo.NewTransaction(dbConnection.GetDb(), l)
 
 	// create and start the app

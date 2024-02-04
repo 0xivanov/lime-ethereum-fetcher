@@ -73,9 +73,8 @@ func TestGetTransactionsPositive(t *testing.T) {
 	}}, nil)
 	subject := &Transaction{hclog.Default(), mockRepo, ""}
 
-	router.GET("/lime/all", subject.GetTransactions)
-
 	// when
+	router.GET("/lime/all", subject.GetTransactions)
 	req, err := http.NewRequest("GET", "/lime/all", nil)
 	if err != nil {
 		t.Fatal(err)
