@@ -30,8 +30,8 @@ func TestFetchTransactionsFromEthereumPositive(t *testing.T) {
 	LoadEnvVars(t)
 	subject := &Transaction{hclog.Default(), nil, os.Getenv("ETH_NODE_URL")}
 
-	var transactionHashes = []string{"0x518e92e52a79128998ebda10e7db80798045a4268237d50488e4dbdcc5da2986", "0x39418a5cb330d799bfff67870817f5469824d470ead0c8c718a8bd37a2e02a46"}
-	result, err := subject.fetchTransactionsFromEthereum(transactionHashes)
+	var transactionHashes = "0x518e92e52a79128998ebda10e7db80798045a4268237d50488e4dbdcc5da2986"
+	result, err := subject.fetchTransactionFromEthereum(transactionHashes)
 	if err != nil {
 		t.Errorf("fetchTransactionsFromEthereum returned error: %v", err)
 		panic(err)
@@ -43,8 +43,8 @@ func TestFetchTransactionsFromEthereumNegative(t *testing.T) {
 	LoadEnvVars(t)
 	subject := &Transaction{hclog.Default(), nil, os.Getenv("ETH_NODE_URL")}
 
-	var transactionHashes = []string{"asdf"}
-	_, err := subject.fetchTransactionsFromEthereum(transactionHashes)
+	var transactionHash = "asdf"
+	_, err := subject.fetchTransactionFromEthereum(transactionHash)
 
 	expectedErrorMessage := "unexpected status code while fetching transactions from ethereum: 400"
 	if err != nil && !strings.Contains(err.Error(), expectedErrorMessage) {

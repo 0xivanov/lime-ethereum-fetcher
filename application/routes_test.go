@@ -2,12 +2,14 @@ package application
 
 import (
 	"database/sql"
+	"encoding/json"
 	"net/http"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/0xivanov/lime-ethereum-fetcher-go/db"
+	"github.com/0xivanov/lime-ethereum-fetcher-go/model"
 	"github.com/0xivanov/lime-ethereum-fetcher-go/repo"
 	"github.com/gin-gonic/gin"
 	"github.com/hashicorp/go-hclog"
@@ -55,8 +57,8 @@ func TestPingRoute(t *testing.T) {
 }
 
 func TestGetTransactionsFlow(t *testing.T) {
-	_, ramdb := Setup(t)
-	// defer app.Stop()
+	app, ramdb := Setup(t)
+	defer app.Stop()
 	defer ramdb.Close()
 	port := os.Getenv("API_PORT")
 	if port == "" {
@@ -89,6 +91,12 @@ func TestGetTransactionsFlow(t *testing.T) {
 		t.Fatal(err)
 	}
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	var transactions []model.Transaction
+	err = json.NewDecoder(resp.Body).Decode(&transactions)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, len(transactions), 1)
 }
 
 func Setup(t *testing.T) (*App, *sql.DB) {

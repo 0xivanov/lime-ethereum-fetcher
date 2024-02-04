@@ -24,6 +24,7 @@ func main() {
 
 	// initialize logger, db and repos
 	l := hclog.Default()
+	// TODO make this halt the app if the db is not present
 	dbConnection, err := db.NewDatabse(postgres.Open(dbConnectionString))
 	transactionRepo := repo.NewTransaction(dbConnection.GetDb(), l)
 

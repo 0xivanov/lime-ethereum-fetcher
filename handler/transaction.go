@@ -27,24 +27,38 @@ func NewTransaction(l hclog.Logger, tr repo.TransactionInterface) *Transaction {
 func (t *Transaction) GetTransactionsWithHashes(ctx *gin.Context) {
 	transactionHashes := ctx.QueryArray("transactionHashes")
 	t.l.Debug("transaction hashes:", "transactionHashes", transactionHashes)
+	var transactions = []model.Transaction{}
 
-	// get transactions from ethereum
-	transactions, err := t.fetchTransactionsFromEthereum(transactionHashes)
-	t.l.Debug("fetched transactions from ethereum", "transactions", transactions)
-	if err != nil {
-		t.l.Error("could not get transactions ethereum", "error", err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	// save to db
-	err = t.tr.SaveTransactions(ctx, transactions)
-	if err != nil {
-		t.l.Error("could not save transactions", "error", err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+	for _, hash := range transactionHashes {
+		// try to get transaction from db
+		transactionFromDb, err := t.tr.GetTransactionByHash(ctx, hash)
+		if transactionFromDb != nil {
+			transactions = append(transactions, *transactionFromDb)
+			continue
+		}
+		if err != nil {
+			t.l.Info("could not get transaction from db with hash", "hash", hash)
+			t.l.Info("trying to get transaction from ethereum", "hash", hash)
+		}
+		// get transactions from ethereum
+		transactionFromEth, err := t.fetchTransactionFromEthereum(hash)
+		if err != nil {
+			t.l.Error("could not get transactions ethereum", "error", err)
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		t.l.Debug("fetched transactions from ethereum", "transactions", transactions)
+		transactions = append(transactions, *transactionFromEth)
+		// save to db
+		err = t.tr.SaveTransaction(ctx, transactionFromEth)
+		if err != nil {
+			t.l.Error("could not save transactions", "error", err)
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
 	}
 
-	t.l.Info("Retrieved transactions", "number of transactions", len(*transactions))
+	t.l.Info("Retrieved transactions", "number of transactions", len(transactions))
 	ctx.JSON(http.StatusOK, gin.H{"transactions": transactions})
 }
 
@@ -60,52 +74,45 @@ func (t *Transaction) GetTransactions(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, transactions)
 }
 
-func (t *Transaction) fetchTransactionsFromEthereum(transactionHashes []string) (*[]model.Transaction, error) {
+func (t *Transaction) fetchTransactionFromEthereum(hash string) (*model.Transaction, error) {
 	client := &http.Client{}
 
-	var transactions = []model.Transaction{}
-	// iterate over transactionHashes and make a request with each hash
-	for _, hash := range transactionHashes {
-
-		var response struct {
-			Result model.Transaction `json:"result"`
-		}
-		// create a JSON payload
-		payload := map[string]interface{}{
-			"id":      1,
-			"jsonrpc": "2.0",
-			"method":  "eth_getTransactionByHash",
-			"params":  []interface{}{hash},
-		}
-
-		// marshal the payload into JSON
-		requestBody, err := json.Marshal(payload)
-		if err != nil {
-			return nil, err
-		}
-
-		req, err := http.NewRequest("POST", t.ethNodeUrl, bytes.NewBuffer(requestBody))
-		if err != nil {
-			return nil, err
-		}
-		req.Header.Set("Content-Type", "application/json")
-
-		resp, err := client.Do(req)
-		if err != nil {
-			return nil, err
-		}
-		defer resp.Body.Close()
-		if resp.StatusCode != http.StatusOK {
-			return nil, fmt.Errorf("unexpected status code while fetching transactions from ethereum: %d. request: %v", resp.StatusCode, req)
-		}
-		// Decode the response JSON
-		decoder := json.NewDecoder(resp.Body)
-		if err := decoder.Decode(&response); err != nil {
-			return nil, err
-		}
-
-		// add the fetched transaction to the list of transactions
-		transactions = append(transactions, response.Result)
+	var response struct {
+		Result model.Transaction `json:"result"`
 	}
-	return &transactions, nil
+	// create a JSON payload
+	payload := map[string]interface{}{
+		"id":      1,
+		"jsonrpc": "2.0",
+		"method":  "eth_getTransactionByHash",
+		"params":  []interface{}{hash},
+	}
+
+	// marshal the payload into JSON
+	requestBody, err := json.Marshal(payload)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", t.ethNodeUrl, bytes.NewBuffer(requestBody))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected status code while fetching transactions from ethereum: %d. request: %v", resp.StatusCode, req)
+	}
+	// Decode the response JSON
+	decoder := json.NewDecoder(resp.Body)
+	if err := decoder.Decode(&response); err != nil {
+		return nil, err
+	}
+
+	return &response.Result, nil
 }
