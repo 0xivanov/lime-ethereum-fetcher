@@ -3,9 +3,11 @@ package application
 import (
 	"database/sql"
 	"encoding/json"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/0xivanov/lime-ethereum-fetcher-go/db"
@@ -65,9 +67,10 @@ func TestGetTransactionsFlow(t *testing.T) {
 		port = "9090" // Default port if not provided
 	}
 
-	url := "http://localhost:" + port + "/lime/eth?transactionHashes=0x9b2f6a3c2e1aed2cccf92ba666c22d053ad0d8a5da7aa1fd5477dcd6577b4524"
-
-	req, err := http.NewRequest("GET", url, nil)
+	// authenticate
+	url := "http://localhost:" + port + "/lime/authenticate"
+	body := strings.NewReader(`{"username":"alice","password":"alice"}`)
+	req, err := http.NewRequest("POST", url, body)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -77,10 +80,39 @@ func TestGetTransactionsFlow(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("Unexpected status code: %d", resp.StatusCode)
+	}
+	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var response struct {
+		Token string `json:"token"`
+	}
+	if err := json.Unmarshal(bodyBytes, &response); err != nil {
+		t.Fatal(err)
+	}
+	token := response.Token
+
+	// get transaction from ethereum and save them to db
+	url = "http://localhost:" + port + "/lime/eth?transactionHashes=0x9b2f6a3c2e1aed2cccf92ba666c22d053ad0d8a5da7aa1fd5477dcd6577b4524"
+	req, err = http.NewRequest("GET", url, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	resp, err = client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
+	// check if the transaction is saved to db
 	url = "http://localhost:" + port + "/lime/all"
-
 	req, err = http.NewRequest("GET", url, nil)
 	if err != nil {
 		t.Fatal(err)

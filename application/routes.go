@@ -16,7 +16,7 @@ func (app *App) loadRoutes(th *handler.Transaction, uh *handler.User) {
 
 	// assignment lime endpoints
 	app.r.GET("/lime/all", th.GetTransactions)
-	app.r.GET("/lime/eth", th.GetTransactionsWithHashes)
-	app.r.GET("/lime/eth/:rlphex", th.GetTransactionsWithRlp)
+	app.r.GET("/lime/eth", handler.AuthenticateMiddleware(), th.GetTransactionsWithHashes)
+	app.r.GET("/lime/eth/:rlphex", handler.AuthenticateMiddleware(), th.GetTransactionsWithRlp)
 	app.r.POST("/lime/authenticate", uh.Authenticate)
 }

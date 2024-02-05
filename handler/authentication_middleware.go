@@ -2,9 +2,8 @@ package handler
 
 import (
 	"net/http"
-	"time"
+	"strings"
 
-	"github.com/0xivanov/lime-ethereum-fetcher-go/model"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt"
 )
@@ -18,61 +17,39 @@ type JWTClaims struct {
 
 func AuthenticateMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var user model.User
-		if err := c.BindJSON(&user); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid credentials"})
+		// Extract the token from the Authorization header
+		authHeader := c.GetHeader("Authorization")
+		if authHeader == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header is missing"})
 			c.Abort()
 			return
 		}
 
-		// Validate credentials
-		if !isValidCredentials(user) {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid username or password"})
-			c.Abort()
-			return
-		}
+		tokenString := strings.Split(authHeader, " ")[1]
 
-		// Generate JWT token
-		token, err := generateToken(user.Username)
+		// Parse the token
+		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+			// Validate the signing method
+			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, jwt.ErrSignatureInvalid
+			}
+			return secretKey, nil
+		})
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
 			c.Abort()
 			return
 		}
 
-		// Set token in the response header
-		c.Header("Authorization", "Bearer "+token)
+		if !token.Valid {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Token is not valid"})
+			c.Abort()
+			return
+		}
+
+		// Set the token claims in the context for later use
+		claims, _ := token.Claims.(jwt.MapClaims)
+		c.Set("user", claims["user"])
 		c.Next()
 	}
-}
-
-func isValidCredentials(user model.User) bool {
-	validCredentials := map[string]string{
-		"alice": "alice",
-		"bob":   "bob",
-		"carol": "carol",
-		"dave":  "dave",
-	}
-	password, ok := validCredentials[user.Username]
-	if !ok || password != user.Password {
-		return false
-	}
-	return true
-}
-
-func generateToken(username string) (string, error) {
-	claims := &JWTClaims{
-		Username: username,
-		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: jwt.TimeFunc().Add(time.Hour * 24).Unix(), // Token expires in 24 hours
-			IssuedAt:  jwt.TimeFunc().Unix(),
-		},
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString(secretKey)
-	if err != nil {
-		return "", err
-	}
-	return tokenString, nil
 }
