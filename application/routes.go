@@ -7,13 +7,16 @@ import (
 
 func (app *App) loadRoutes(th *handler.Transaction, uh *handler.User) {
 
+	// basic endpoint to test if the app is running properly
 	app.r.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"message": "pong",
 		})
 	})
 
+	// assignment lime endpoints
 	app.r.GET("/lime/all", th.GetTransactions)
 	app.r.GET("/lime/eth", th.GetTransactionsWithHashes)
+	app.r.GET("/lime/eth/:rlphex", th.GetTransactionsWithRlp)
 	app.r.POST("/lime/authenticate", uh.Authenticate)
 }
