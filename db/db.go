@@ -15,7 +15,7 @@ func NewDatabse(dialector gorm.Dialector) (*Database, error) {
 		return nil, err
 	}
 
-	db.AutoMigrate(&model.User{})
+	// db.AutoMigrate(&model.User{})
 	db.AutoMigrate(&model.Transaction{})
 
 	return &Database{db: db}, nil

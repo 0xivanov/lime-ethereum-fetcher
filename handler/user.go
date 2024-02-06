@@ -5,17 +5,19 @@ import (
 	"time"
 
 	"github.com/0xivanov/lime-ethereum-fetcher-go/model"
+	"github.com/0xivanov/lime-ethereum-fetcher-go/repo"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt"
 	"github.com/hashicorp/go-hclog"
 )
 
 type User struct {
-	l hclog.Logger
+	l  hclog.Logger
+	tr repo.TransactionInterface
 }
 
-func NewUser(l hclog.Logger) *User {
-	return &User{l}
+func NewUser(l hclog.Logger, tr repo.TransactionInterface) *User {
+	return &User{l, tr}
 }
 
 func (u *User) Authenticate(c *gin.Context) {
@@ -73,4 +75,44 @@ func generateToken(username string) (string, error) {
 		return "", err
 	}
 	return tokenString, nil
+}
+
+func (uh *User) GetUserTransactions(c *gin.Context) {
+	authToken := c.GetHeader("AUTH_TOKEN")
+	if authToken == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing AUTH_TOKEN header"})
+		return
+	}
+	token, err := jwt.Parse(authToken, func(token *jwt.Token) (interface{}, error) {
+		// TODO
+		return []byte("test-key"), nil
+	})
+
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+		return
+	}
+
+	if token.Valid {
+		claims, ok := token.Claims.(jwt.MapClaims)
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Token is not valid"})
+			return
+		}
+
+		// Extract the username from the claims
+		username := claims["username"].(string)
+		transactions, err := uh.tr.GetTransactionsByUsername(c, username)
+
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not load transactions for this username: " + username})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"transactions": transactions})
+	} else {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Token is not valid"})
+		return
+	}
+
 }

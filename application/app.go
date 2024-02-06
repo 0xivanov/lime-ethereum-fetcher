@@ -24,7 +24,7 @@ type App struct {
 
 func New(r *gin.Engine, p string, db *db.Database, l hclog.Logger, tr repo.TransactionInterface) *App {
 	app := &App{r, p, l, nil}
-	app.loadRoutes(handler.NewTransaction(l, tr), handler.NewUser(l))
+	app.loadRoutes(handler.NewTransaction(l, tr), handler.NewUser(l, tr))
 	return app
 }
 

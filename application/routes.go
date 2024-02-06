@@ -19,4 +19,5 @@ func (app *App) loadRoutes(th *handler.Transaction, uh *handler.User) {
 	app.r.GET("/lime/eth", handler.AuthenticateMiddleware(), th.GetTransactionsWithHashes)
 	app.r.GET("/lime/eth/:rlphex", handler.AuthenticateMiddleware(), th.GetTransactionsWithRlp)
 	app.r.POST("/lime/authenticate", uh.Authenticate)
+	app.r.GET("/lime/my", uh.GetUserTransactions)
 }

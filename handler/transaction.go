@@ -2,7 +2,6 @@ package handler
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -29,6 +28,7 @@ func NewTransaction(l hclog.Logger, tr repo.TransactionInterface) *Transaction {
 func (t *Transaction) GetTransactionsWithHashes(ctx *gin.Context) {
 	transactionHashes := ctx.QueryArray("transactionHashes")
 	t.l.Debug("transaction hashes:", "transactionHashes", transactionHashes)
+
 	transactions, statusCode, err := t.processAndSaveTransactions(ctx, transactionHashes)
 	if err != nil {
 		ctx.JSON(statusCode, gin.H{"error": err.Error()})
@@ -49,6 +49,8 @@ func (t *Transaction) GetTransactionsWithRlp(ctx *gin.Context) {
 		return
 	}
 	t.l.Debug("transaction hashes:", "transactionHashes", transactionHashes)
+	claims, _ := ctx.Get("user")
+	fmt.Printf("%v", claims)
 	transactions, statusCode, err := t.processAndSaveTransactions(ctx, transactionHashes)
 	if err != nil {
 		ctx.JSON(statusCode, gin.H{"error": err.Error()})
@@ -68,7 +70,7 @@ func (t *Transaction) GetTransactions(ctx *gin.Context) {
 		return
 	}
 	t.l.Info("Retrieved transactions", "number of transactions", len(transactions))
-	ctx.JSON(http.StatusOK, transactions)
+	ctx.JSON(http.StatusOK, gin.H{"transactions": transactions})
 }
 
 func (t *Transaction) fetchTransactionFromEthereum(hash string) (*model.Transaction, error) {
@@ -114,13 +116,15 @@ func (t *Transaction) fetchTransactionFromEthereum(hash string) (*model.Transact
 	return &response.Result, nil
 }
 
-func (t *Transaction) processAndSaveTransactions(ctx context.Context, transactionHashes []string) (*[]model.Transaction, int, error) {
+func (t *Transaction) processAndSaveTransactions(ctx *gin.Context, transactionHashes []string) (*[]model.Transaction, int, error) {
 	var transactions = []model.Transaction{}
+	username, _ := ctx.Get("user")
 	for _, hash := range transactionHashes {
 		// try to get transaction from db
 		transactionFromDb, err := t.tr.GetTransactionByHash(ctx, hash)
 		if transactionFromDb != nil {
 			transactions = append(transactions, *transactionFromDb)
+			transactionFromDb.Username = fmt.Sprint(username)
 			continue
 		}
 		if err != nil {
@@ -135,6 +139,7 @@ func (t *Transaction) processAndSaveTransactions(ctx context.Context, transactio
 		}
 		t.l.Debug("fetched transactions from ethereum", "transactions", transactions)
 		transactions = append(transactions, *transactionFromEth)
+		transactionFromEth.Username = fmt.Sprint(username)
 		// save to db
 		err = t.tr.SaveTransaction(ctx, transactionFromEth)
 		if err != nil {

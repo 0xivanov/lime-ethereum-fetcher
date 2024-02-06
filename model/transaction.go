@@ -12,6 +12,7 @@ type Transaction struct {
 	LogsCount         string `json:"-" gorm:"column:logs_count"`
 	Input             string `json:"input" gorm:"column:input"`
 	Value             string `json:"value" gorm:"column:value"`
+	Username          string `json:"-" gorm:"-"`
 }
 
 type TransactionResponse struct {

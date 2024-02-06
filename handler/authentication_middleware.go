@@ -8,6 +8,7 @@ import (
 	"github.com/golang-jwt/jwt"
 )
 
+// TODO
 var secretKey = []byte("test-key")
 
 type JWTClaims struct {
@@ -49,7 +50,7 @@ func AuthenticateMiddleware() gin.HandlerFunc {
 
 		// Set the token claims in the context for later use
 		claims, _ := token.Claims.(jwt.MapClaims)
-		c.Set("user", claims["user"])
+		c.Set("user", claims["username"])
 		c.Next()
 	}
 }
