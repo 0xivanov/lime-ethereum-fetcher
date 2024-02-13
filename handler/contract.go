@@ -9,6 +9,7 @@ import (
 
 	"github.com/0xivanov/lime-ethereum-fetcher-go/api"
 	"github.com/0xivanov/lime-ethereum-fetcher-go/model"
+	"github.com/0xivanov/lime-ethereum-fetcher-go/repo"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -20,10 +21,11 @@ import (
 type SmartContract struct {
 	l      hclog.Logger
 	client *ethclient.Client
+	cr     repo.ContractInterface
 }
 
-func NewSmartContract(l hclog.Logger, client *ethclient.Client) *SmartContract {
-	return &SmartContract{l, client}
+func NewSmartContract(l hclog.Logger, client *ethclient.Client, cr repo.ContractInterface) *SmartContract {
+	return &SmartContract{l, client, cr}
 }
 
 func (sc *SmartContract) SavePerson(ctx *gin.Context) {
@@ -55,6 +57,17 @@ func (sc *SmartContract) SavePerson(ctx *gin.Context) {
 
 	// Return transaction hash and status
 	ctx.JSON(http.StatusOK, gin.H{"txHash": tx.Hash().Hex(), "status": "pending"})
+}
+
+func (sc *SmartContract) GetPersons(ctx *gin.Context) {
+	persons, err := sc.cr.GetPersons(ctx)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve persons from database"})
+		return
+	}
+
+	// Return list of persons as JSON response
+	ctx.JSON(http.StatusOK, persons)
 }
 
 func getAccountAuth(client *ethclient.Client, accountAddress string) *bind.TransactOpts {

@@ -2,14 +2,12 @@ package handler
 
 import (
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt"
 )
-
-// TODO
-var secretKey = []byte("test-key")
 
 type JWTClaims struct {
 	Username string `json:"username"`
@@ -17,6 +15,7 @@ type JWTClaims struct {
 }
 
 func AuthenticateMiddleware() gin.HandlerFunc {
+	jwtSecret := []byte(os.Getenv("JWT_SECRET"))
 	return func(c *gin.Context) {
 		// Extract the token from the Authorization header
 		authHeader := c.GetHeader("Authorization")
@@ -34,7 +33,7 @@ func AuthenticateMiddleware() gin.HandlerFunc {
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, jwt.ErrSignatureInvalid
 			}
-			return secretKey, nil
+			return jwtSecret, nil
 		})
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})

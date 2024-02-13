@@ -153,7 +153,7 @@ func Setup(t *testing.T) (*App, *sql.DB) {
 	port := os.Getenv("API_PORT")
 	ethNodeUrl := os.Getenv("ETH_NODE_URL")
 	wsEthNodeUrl := os.Getenv("WS_ETH_NODE_URL")
-	//privateKey := os.Getenv("PRIVATE_KEY")
+	jwtSecret := os.Getenv("JWT_SECRET")
 
 	// init logger
 	l := hclog.Default()
@@ -185,7 +185,7 @@ func Setup(t *testing.T) (*App, *sql.DB) {
 	}
 
 	// create and start the app
-	app := New(gin.Default(), port, ethNodeUrl, client, wsClient, postgres, l, transactionRepo, contractRepo)
+	app := New(gin.Default(), port, jwtSecret, ethNodeUrl, client, wsClient, postgres, l, transactionRepo, contractRepo)
 
 	go app.Start()
 	return app, ramdb

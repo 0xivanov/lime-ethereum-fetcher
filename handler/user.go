@@ -12,12 +12,13 @@ import (
 )
 
 type User struct {
-	l  hclog.Logger
-	tr repo.TransactionInterface
+	l         hclog.Logger
+	tr        repo.TransactionInterface
+	JwtSecret []byte
 }
 
-func NewUser(l hclog.Logger, tr repo.TransactionInterface) *User {
-	return &User{l, tr}
+func NewUser(l hclog.Logger, tr repo.TransactionInterface, jwtSecret string) *User {
+	return &User{l, tr, []byte(jwtSecret)}
 }
 
 func (u *User) Authenticate(c *gin.Context) {
@@ -34,7 +35,7 @@ func (u *User) Authenticate(c *gin.Context) {
 	}
 
 	// Generate JWT token
-	token, err := generateToken(user.Username)
+	token, err := u.generateToken(user.Username)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
 		return
@@ -60,7 +61,7 @@ func isValidCredentials(user model.User) bool {
 	return true
 }
 
-func generateToken(username string) (string, error) {
+func (u *User) generateToken(username string) (string, error) {
 	claims := &JWTClaims{
 		Username: username,
 		StandardClaims: jwt.StandardClaims{
@@ -70,7 +71,7 @@ func generateToken(username string) (string, error) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString(secretKey)
+	tokenString, err := token.SignedString(u.JwtSecret)
 	if err != nil {
 		return "", err
 	}
@@ -85,7 +86,7 @@ func (uh *User) GetUserTransactions(c *gin.Context) {
 	}
 	token, err := jwt.Parse(authToken, func(token *jwt.Token) (interface{}, error) {
 		// TODO
-		return []byte("test-key"), nil
+		return uh.JwtSecret, nil
 	})
 
 	if err != nil {

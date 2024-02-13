@@ -28,10 +28,10 @@ type App struct {
 	cancelFunc    context.CancelFunc
 }
 
-func New(r *gin.Engine, p string, ethNodeUrl string, client *ethclient.Client, wsClient *ethclient.Client, db *db.Database, l hclog.Logger, tr repo.TransactionInterface, cr repo.ContractInterface) *App {
+func New(r *gin.Engine, p string, ethNodeUrl string, jwtSecret string, client *ethclient.Client, wsClient *ethclient.Client, db *db.Database, l hclog.Logger, tr repo.TransactionInterface, cr repo.ContractInterface) *App {
 	ctx, cancel := context.WithCancel(context.Background())
 	app := &App{r, p, l, nil, client, wsClient, &EventListener{l, cr}, ctx, cancel}
-	app.loadRoutes(handler.NewTransaction(l, tr, ethNodeUrl), handler.NewUser(l, tr), handler.NewSmartContract(l, client))
+	app.loadRoutes(handler.NewTransaction(l, tr, ethNodeUrl), handler.NewUser(l, tr, jwtSecret), handler.NewSmartContract(l, client, cr))
 	return app
 }
 
@@ -54,14 +54,14 @@ func (app *App) Start() {
 		}
 	}()
 
-	// go func() {
-	// 	defer func() {
-	// 		if r := recover(); r != nil {
-	// 			app.l.Error("event listener goroutine panicked", "error", r)
-	// 		}
-	// 	}()
-	// 	app.eventListener.PersonInfoEventListenerStart(app.ctx, app.wsClient)
-	// }()
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				app.l.Error("event listener goroutine panicked", "error", r)
+			}
+		}()
+		app.eventListener.PersonInfoEventListenerStart(app.ctx, app.wsClient)
+	}()
 
 	// trap sigterm or interupt and gracefully shutdown the server
 	c := make(chan os.Signal, 1)

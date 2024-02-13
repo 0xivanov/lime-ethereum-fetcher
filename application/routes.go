@@ -21,4 +21,5 @@ func (app *App) loadRoutes(th *handler.Transaction, uh *handler.User, sch *handl
 	app.r.POST("/lime/authenticate", uh.Authenticate)
 	app.r.GET("/lime/my", uh.GetUserTransactions)
 	app.r.POST("/lime/savePerson", sch.SavePerson)
+	app.r.GET("/lime/listPersons", sch.GetPersons)
 }

@@ -26,7 +26,7 @@ func main() {
 	postgresConnString := os.Getenv("DB_CONNECTION_URL")
 	ethNodeUrl := os.Getenv("ETH_NODE_URL")
 	wsEthNodeUrl := os.Getenv("WS_ETH_NODE_URL")
-	//privateKey := os.Getenv("PRIVATE_KEY")
+	jwtSecret := os.Getenv("JWT_SECRET")
 
 	// init logger
 	l := hclog.Default()
@@ -53,6 +53,6 @@ func main() {
 	}
 
 	// create and start the app
-	app := application.New(gin.Default(), port, ethNodeUrl, client, wsClient, postgres, l, transactionRepo, contractRepo)
+	app := application.New(gin.Default(), port, ethNodeUrl, jwtSecret, client, wsClient, postgres, l, transactionRepo, contractRepo)
 	app.Start()
 }
