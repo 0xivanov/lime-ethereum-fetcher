@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -13,10 +14,12 @@ import (
 	"github.com/0xivanov/lime-ethereum-fetcher-go/db"
 	"github.com/0xivanov/lime-ethereum-fetcher-go/model"
 	"github.com/0xivanov/lime-ethereum-fetcher-go/repo"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/gin-gonic/gin"
 	"github.com/hashicorp/go-hclog"
 	"github.com/joho/godotenv"
 	_ "github.com/proullon/ramsql/driver"
+	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 	"gorm.io/driver/postgres"
 )
@@ -123,12 +126,12 @@ func TestGetTransactionsFlow(t *testing.T) {
 		t.Fatal(err)
 	}
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
-	var transactions []model.Transaction
-	err = json.NewDecoder(resp.Body).Decode(&transactions)
+	var transactionResponse model.TransactionResponse
+	err = json.NewDecoder(resp.Body).Decode(&transactionResponse)
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.Equal(t, len(transactions), 1)
+	assert.Equal(t, len(transactionResponse.Transactions), 1)
 }
 
 func Setup(t *testing.T) (*App, *sql.DB) {
@@ -146,18 +149,44 @@ func Setup(t *testing.T) (*App, *sql.DB) {
 	if err != nil {
 		t.Errorf("could not load env vars: %v", err)
 	}
-	port := os.Getenv("API_PORT")
 
+	port := os.Getenv("API_PORT")
+	ethNodeUrl := os.Getenv("ETH_NODE_URL")
+	wsEthNodeUrl := os.Getenv("WS_ETH_NODE_URL")
+	//privateKey := os.Getenv("PRIVATE_KEY")
+
+	// init logger
 	l := hclog.Default()
+
+	// init db
 	ramdb, err := sql.Open("ramsql", "TestGormQuickStart")
 	if err != nil {
-		t.Fatalf("Error creating test database: %v", err)
+		t.Fatalf("error creating test database: %v", err)
 	}
-	dbConnection, err := db.NewDatabse(postgres.New(postgres.Config{
+	postgres, err := db.NewDatabse(postgres.New(postgres.Config{
 		Conn: ramdb,
 	}))
-	transactionRepo := repo.NewTransaction(dbConnection.GetDb(), l)
-	app := New(gin.Default(), port, dbConnection, l, transactionRepo)
+	redis := redis.NewClient(&redis.Options{
+		Addr:     "localhost:6379",
+		Password: "",
+		DB:       0,
+	})
+
+	// init repos
+	transactionRepo := repo.NewTransaction(postgres.GetDb(), redis, l)
+	contractRepo := repo.NewContract(postgres.GetDb(), l)
+
+	// init eth clients
+	client, err := ethclient.Dial(ethNodeUrl)
+	wsClient, err := ethclient.Dial(wsEthNodeUrl)
+	if err != nil {
+		log.Fatal("error connecting to eth node")
+		panic(err)
+	}
+
+	// create and start the app
+	app := New(gin.Default(), port, ethNodeUrl, client, wsClient, postgres, l, transactionRepo, contractRepo)
+
 	go app.Start()
 	return app, ramdb
 }

@@ -25,24 +25,19 @@ type Transaction struct {
 	l   hclog.Logger
 }
 
-func NewTransaction(db *gorm.DB, l hclog.Logger) *Transaction {
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
-		Password: "",
-		DB:       0,
-	})
+func NewTransaction(db *gorm.DB, rdb *redis.Client, l hclog.Logger) *Transaction {
 	return &Transaction{db, rdb, l}
 }
 
 func (repo *Transaction) SaveTransaction(ctx context.Context, transaction *model.Transaction) error {
 	if err := repo.db.Create(transaction).Error; err != nil {
-		repo.l.Error("could not create transaction: %v", err)
+		repo.l.Error("could not create transaction", "error", err)
 		return fmt.Errorf("could not create transaction: %v", err)
 	}
 
 	if err := repo.rdb.SAdd(ctx, transaction.Username, transaction.ID).Err(); err != nil {
-		// TODO
-		panic(err)
+		repo.l.Error("could not save the transaction id to redis", "error", err)
+		return fmt.Errorf("could not save the transaction id to redis: %v", err)
 	}
 	repo.l.Info("Stored transaction in Redis", "ID", transaction.ID, "username", transaction.Username)
 	return nil

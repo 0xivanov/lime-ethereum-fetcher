@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 
 	"github.com/0xivanov/lime-ethereum-fetcher-go/model"
 	"github.com/0xivanov/lime-ethereum-fetcher-go/repo"
@@ -20,8 +19,7 @@ type Transaction struct {
 	ethNodeUrl string
 }
 
-func NewTransaction(l hclog.Logger, tr repo.TransactionInterface) *Transaction {
-	ethNodeUrl := os.Getenv("ETH_NODE_URL")
+func NewTransaction(l hclog.Logger, tr repo.TransactionInterface, ethNodeUrl string) *Transaction {
 	return &Transaction{l, tr, ethNodeUrl}
 }
 
@@ -73,6 +71,7 @@ func (t *Transaction) GetTransactions(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"transactions": transactions})
 }
 
+// turns out fetching the required data with ethclient is pain in the ass
 func (t *Transaction) fetchTransactionFromEthereum(hash string) (*model.Transaction, error) {
 	client := &http.Client{}
 

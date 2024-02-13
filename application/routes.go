@@ -5,7 +5,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func (app *App) loadRoutes(th *handler.Transaction, uh *handler.User) {
+func (app *App) loadRoutes(th *handler.Transaction, uh *handler.User, sch *handler.SmartContract) {
 
 	// basic endpoint to test if the app is running properly
 	app.r.GET("/ping", func(c *gin.Context) {
@@ -14,10 +14,11 @@ func (app *App) loadRoutes(th *handler.Transaction, uh *handler.User) {
 		})
 	})
 
-	// assignment lime endpoints
+	// lime endpoints
 	app.r.GET("/lime/all", th.GetTransactions)
 	app.r.GET("/lime/eth", handler.AuthenticateMiddleware(), th.GetTransactionsWithHashes)
 	app.r.GET("/lime/eth/:rlphex", handler.AuthenticateMiddleware(), th.GetTransactionsWithRlp)
 	app.r.POST("/lime/authenticate", uh.Authenticate)
 	app.r.GET("/lime/my", uh.GetUserTransactions)
+	app.r.POST("/lime/savePerson", sch.SavePerson)
 }

@@ -12,3 +12,12 @@ dropdb:
 
 createMocks:
 	mockgen -source=repo/transaction.go  -destination=./mocks/transaction_repo_mock.go mock TransactionMock
+
+generateContractBin:
+	solc --optimize --bin ./contracts/SimplePersonInfoContract/SimplePersonInfoContract.sol -o build
+
+generateContractAbi:
+	solc --optimize --abi ./contracts/SimplePersonInfoContract/SimplePersonInfoContract.sol -o build
+
+generateContractApi:
+	abigen --abi=./build/SimplePersonInfoContract.abi --bin=./build/SimplePersonInfoContract.bin --pkg=api --out=./api/SimplePersonInfoContract.go

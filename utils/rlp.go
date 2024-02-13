@@ -7,13 +7,13 @@ import (
 )
 
 func DecodeRlphex(rlphex string) ([]string, error) {
-	// Decode the input hex string
+	// decode the input hex string
 	bytes, err := hex.DecodeString(rlphex)
 	if err != nil {
 		return nil, err
 	}
 
-	// Decode the RLP-encoded list
+	// decode the RLP-encoded list
 	var list []string
 	if err := rlp.DecodeBytes(bytes, &list); err != nil {
 		return nil, err
