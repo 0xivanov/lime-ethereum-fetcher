@@ -85,7 +85,6 @@ func (uh *User) GetUserTransactions(c *gin.Context) {
 		return
 	}
 	token, err := jwt.Parse(authToken, func(token *jwt.Token) (interface{}, error) {
-		// TODO
 		return uh.JwtSecret, nil
 	})
 

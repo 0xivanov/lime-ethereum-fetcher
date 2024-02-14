@@ -1,8 +1,9 @@
 package application
 
 import (
-	"database/sql"
+	"context"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/0xivanov/lime-ethereum-fetcher-go/db"
 	"github.com/0xivanov/lime-ethereum-fetcher-go/model"
@@ -18,9 +20,11 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/hashicorp/go-hclog"
 	"github.com/joho/godotenv"
-	_ "github.com/proullon/ramsql/driver"
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
+	tc "github.com/testcontainers/testcontainers-go"
+	pc "github.com/testcontainers/testcontainers-go/modules/postgres"
+	"github.com/testcontainers/testcontainers-go/wait"
 	"gorm.io/driver/postgres"
 )
 
@@ -32,10 +36,19 @@ import (
 
 *
 */
+
+/*
+*
+Test case: /ping
+
+*
+*/
 func TestPingRoute(t *testing.T) {
-	app, ramdb := Setup(t)
+	ctx := context.Background()
+	app, postgresC, redisC := Setup(t, ctx)
 	defer app.Stop()
-	defer ramdb.Close()
+	defer postgresC.Terminate(ctx)
+	defer redisC.Terminate(ctx)
 	port := os.Getenv("API_PORT")
 	if port == "" {
 		port = "9090" // Default port if not provided
@@ -61,10 +74,19 @@ func TestPingRoute(t *testing.T) {
 	assert.Equal(t, expected, string(body))
 }
 
+/*
+*
+
+Test case: /authenticate -> /eth?transactionHashes -> /all
+
+*
+*/
 func TestGetTransactionsFlow(t *testing.T) {
-	app, ramdb := Setup(t)
+	ctx := context.Background()
+	app, postgresC, redisC := Setup(t, ctx)
 	defer app.Stop()
-	defer ramdb.Close()
+	defer postgresC.Terminate(ctx)
+	defer redisC.Terminate(ctx)
 	port := os.Getenv("API_PORT")
 	if port == "" {
 		port = "9090" // Default port if not provided
@@ -134,7 +156,7 @@ func TestGetTransactionsFlow(t *testing.T) {
 	assert.Equal(t, len(transactionResponse.Transactions), 1)
 }
 
-func Setup(t *testing.T) (*App, *sql.DB) {
+func Setup(t *testing.T, ctx context.Context) (*App, tc.Container, tc.Container) {
 	gin.SetMode(gin.TestMode)
 	testDir, err := os.Getwd()
 	if err != nil {
@@ -159,22 +181,33 @@ func Setup(t *testing.T) (*App, *sql.DB) {
 	l := hclog.Default()
 
 	// init db
-	ramdb, err := sql.Open("ramsql", "TestGormQuickStart")
+	pgC, pgHost, pgPort, err := startPostgreSQLContainer(t, ctx)
 	if err != nil {
-		t.Fatalf("error creating test database: %v", err)
+		t.Fatalf("failed to start PostgreSQL container: %v", err)
 	}
-	postgres, err := db.NewDatabse(postgres.New(postgres.Config{
-		Conn: ramdb,
-	}))
-	redis := redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
+	connStr := constructConnectionString(pgHost, pgPort)
+	// time.Sleep(1 * time.Second)
+	postgresDb, err := db.NewDatabse(postgres.Open(connStr))
+	if err != nil {
+		t.Fatalf("error connecting to postgres db")
+	}
+
+	// Start the Redis container
+	redisC, redisHost, redisPort, err := startRedisContainer(t, ctx)
+	if err != nil {
+		t.Fatalf("failed to start Redis container: %v", err)
+	}
+
+	// Initialize Redis client
+	redisClient := redis.NewClient(&redis.Options{
+		Addr:     fmt.Sprintf("%s:%s", redisHost, redisPort),
 		Password: "",
 		DB:       0,
 	})
 
 	// init repos
-	transactionRepo := repo.NewTransaction(postgres.GetDb(), redis, l)
-	contractRepo := repo.NewContract(postgres.GetDb(), l)
+	transactionRepo := repo.NewTransaction(postgresDb.GetDb(), redisClient, l)
+	contractRepo := repo.NewContract(postgresDb.GetDb(), l)
 
 	// init eth clients
 	client, err := ethclient.Dial(ethNodeUrl)
@@ -185,8 +218,69 @@ func Setup(t *testing.T) (*App, *sql.DB) {
 	}
 
 	// create and start the app
-	app := New(gin.Default(), port, jwtSecret, ethNodeUrl, client, wsClient, postgres, l, transactionRepo, contractRepo)
+	app := New(gin.Default(), port, ethNodeUrl, jwtSecret, client, wsClient, postgresDb, l, transactionRepo, contractRepo)
 
 	go app.Start()
-	return app, ramdb
+	return app, pgC, redisC
+}
+
+func startPostgreSQLContainer(t *testing.T, ctx context.Context) (tc.Container, string, string, error) {
+	// Define the PostgreSQL container configuration
+	pgC, err := pc.RunContainer(ctx,
+		tc.WithImage("postgres:latest"),
+		pc.WithDatabase("postgres"),
+		pc.WithUsername("root"),
+		pc.WithPassword("password"),
+		tc.WithWaitStrategy(
+			wait.ForLog("database system is ready to accept connections").
+				WithOccurrence(2).
+				WithStartupTimeout(5*time.Second)),
+	)
+
+	if err != nil {
+		return nil, "", "", err
+	}
+	// Get the PostgreSQL container's host and port
+	pgHost, err := pgC.Host(ctx)
+	if err != nil {
+		return nil, "", "", err
+	}
+	pgPort, err := pgC.MappedPort(ctx, "5432")
+	if err != nil {
+		return nil, "", "", err
+	}
+
+	return pgC, pgHost, pgPort.Port(), nil
+}
+
+func constructConnectionString(host, port string) string {
+	return fmt.Sprintf("postgresql://root:password@%s:%s/postgres", host, port)
+}
+
+func startRedisContainer(t *testing.T, ctx context.Context) (tc.Container, string, string, error) {
+	req := tc.ContainerRequest{
+		Image:        "redis:latest",
+		ExposedPorts: []string{"6379/tcp"},
+		WaitingFor:   wait.ForLog("Ready to accept connections").WithStartupTimeout(30 * time.Second),
+	}
+
+	redisC, err := tc.GenericContainer(ctx, tc.GenericContainerRequest{
+		ContainerRequest: req,
+		Started:          true,
+	})
+	if err != nil {
+		return nil, "", "", err
+	}
+
+	// Get the Redis container's host and port
+	redisHost, err := redisC.Host(ctx)
+	if err != nil {
+		return nil, "", "", err
+	}
+	redisPort, err := redisC.MappedPort(ctx, "6379")
+	if err != nil {
+		return nil, "", "", err
+	}
+
+	return redisC, redisHost, redisPort.Port(), nil
 }

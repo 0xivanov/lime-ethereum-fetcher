@@ -19,7 +19,7 @@ func main() {
 	// get env vars
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatal("error loading .env file")
+		log.Fatalf("error loading .env file: %v", err)
 		panic(err)
 	}
 	port := os.Getenv("API_PORT")
@@ -32,8 +32,11 @@ func main() {
 	l := hclog.Default()
 
 	// init db
-	// TODO make this halt the app if the db is not present
 	postgres, err := db.NewDatabse(postgres.Open(postgresConnString))
+	if err != nil {
+		log.Fatalf("error connecting to postgres db: %v", err)
+		panic(err)
+	}
 	redis := redis.NewClient(&redis.Options{
 		Addr:     "localhost:6379",
 		Password: "",
@@ -48,7 +51,7 @@ func main() {
 	client, err := ethclient.Dial(ethNodeUrl)
 	wsClient, err := ethclient.Dial(wsEthNodeUrl)
 	if err != nil {
-		log.Fatal("error connecting to eth node")
+		log.Fatalf("error connecting to eth node %v", err)
 		panic(err)
 	}
 
