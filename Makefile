@@ -18,6 +18,8 @@ redisInit:
 
 createMocks:
 	mockgen -source=repo/transaction.go  -destination=./mocks/transaction_repo_mock.go mock TransactionMock
+	mockgen -source=repo/contract.go  -destination=./mocks/contract_repo_mock.go mock ContractMock
+
 
 generateContractBin:
 	solc --optimize --bin ./contracts/SimplePersonInfoContract/SimplePersonInfoContract.sol -o build

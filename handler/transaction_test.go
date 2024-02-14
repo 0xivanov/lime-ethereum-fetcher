@@ -26,7 +26,7 @@ import (
 
 *
 */
-func TestFetchTransactionsFromEthereumPositive(t *testing.T) {
+func TestFetchTransactionsFromEthereum_Positive(t *testing.T) {
 	LoadEnvVars(t)
 	subject := &Transaction{hclog.Default(), nil, os.Getenv("ETH_NODE_URL")}
 
@@ -39,7 +39,7 @@ func TestFetchTransactionsFromEthereumPositive(t *testing.T) {
 	fmt.Println(result)
 }
 
-func TestFetchTransactionsFromEthereumNegative(t *testing.T) {
+func TestFetchTransactionsFromEthereum_Negative(t *testing.T) {
 	LoadEnvVars(t)
 	subject := &Transaction{hclog.Default(), nil, os.Getenv("ETH_NODE_URL")}
 
@@ -52,7 +52,7 @@ func TestFetchTransactionsFromEthereumNegative(t *testing.T) {
 	}
 }
 
-func TestGetTransactionsPositive(t *testing.T) {
+func TestGetTransactions_Positive(t *testing.T) {
 	// given
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -86,7 +86,7 @@ func TestGetTransactionsPositive(t *testing.T) {
 	assert.Equal(t, http.StatusOK, rr.Code)
 }
 
-func TestGetTransactionsNegativeDbError(t *testing.T) {
+func TestGetTransactions_NegativeDbError(t *testing.T) {
 	// given
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
