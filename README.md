@@ -3,7 +3,7 @@
 
 1. **Clone Repository:**
    ```bash
-   git clone 
+   git clone https://github.com/0xivanov/lime-ethereum-fetcher.git
    ```
 
 2. **Generate Mocks:**
