@@ -23,6 +23,9 @@ func main() {
 		panic(err)
 	}
 	port := os.Getenv("API_PORT")
+	if port == "" {
+		port = "9090" // Default port if not provided
+	}
 	postgresConnString := os.Getenv("DB_CONNECTION_URL")
 	ethNodeUrl := os.Getenv("ETH_NODE_URL")
 	wsEthNodeUrl := os.Getenv("WS_ETH_NODE_URL")
@@ -38,7 +41,7 @@ func main() {
 		panic(err)
 	}
 	redis := redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
+		Addr:     "some-redis:6379",
 		Password: "",
 		DB:       0,
 	})

@@ -2,7 +2,6 @@ package application
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"math/big"
 	"strings"
@@ -47,14 +46,14 @@ const personInfoAbi = `[
 ]`
 
 type EventListener struct {
-	l  hclog.Logger
-	cr repo.ContractInterface
+	logger            hclog.Logger
+	contractInterface repo.ContractInterface
 }
 
 func (el *EventListener) PersonInfoEventListenerStart(ctx context.Context, client *ethclient.Client) {
 	contractAbi, err := abi.JSON(strings.NewReader(personInfoAbi))
 	if err != nil {
-		fmt.Printf("failed to parse ABI: %v", err)
+		el.logger.Error("failed to parse ABI", "error", err)
 		panic(err)
 	}
 	personInfoTopic := crypto.Keccak256Hash([]byte("PersonInfoUpdated(uint256,string,uint256)"))
@@ -71,7 +70,7 @@ func (el *EventListener) PersonInfoEventListenerStart(ctx context.Context, clien
 
 	sub, err := client.SubscribeFilterLogs(ctx, query, ch)
 	if err != nil {
-		el.l.Error("cannot subscribe to event", "error", err)
+		el.logger.Error("cannot subscribe to event", "error", err)
 		panic(err)
 	}
 	defer sub.Unsubscribe()
@@ -79,7 +78,7 @@ func (el *EventListener) PersonInfoEventListenerStart(ctx context.Context, clien
 	for {
 		select {
 		case log := <-ch:
-			el.l.Info("matching log encountered", "log", log)
+			el.logger.Info("matching log encountered", "log", log)
 
 			var eventData struct {
 				NewName     string
@@ -101,28 +100,28 @@ func (el *EventListener) PersonInfoEventListenerStart(ctx context.Context, clien
 
 				// parse topics without event name
 				if err := abi.ParseTopics(&eventData, indexed, log.Topics[1:]); err != nil {
-					el.l.Error("cannot parse indexed topic into event data", "error", err)
+					el.logger.Error("cannot parse indexed topic into event data", "error", err)
 					continue
 				}
 
 				if err := contractAbi.UnpackIntoInterface(&eventData, evInfo.Name, log.Data); err != nil {
-					el.l.Error("cannot parse log data into event data", "error", err)
+					el.logger.Error("cannot parse log data into event data", "error", err)
 					continue
 				}
 				break
 			}
 
-			err = el.cr.SavePersonInfoUpdatedEvent(ctx, &model.PersonInfoEvent{
+			err = el.contractInterface.SavePersonInfoUpdatedEvent(ctx, &model.PersonInfoEvent{
 				TxHash: log.TxHash.String(),
 				Index:  eventData.PersonIndex.Uint64(),
 				Name:   eventData.NewName,
 				Age:    eventData.NewAge.Uint64(),
 			})
 			if err != nil {
-				el.l.Error("failed to save event data to db", "error", err)
+				el.logger.Error("failed to save event data to db", "error", err)
 				continue
 			}
-			el.l.Info("saved event data to db", "event", eventData)
+			el.logger.Info("saved event data to db", "event", eventData)
 		case <-ctx.Done():
 			sub.Unsubscribe()
 			return

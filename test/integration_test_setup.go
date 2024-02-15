@@ -1,14 +1,14 @@
-package application
+package test
 
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
+	"github.com/0xivanov/lime-ethereum-fetcher-go/application"
 	"github.com/0xivanov/lime-ethereum-fetcher-go/db"
 	"github.com/0xivanov/lime-ethereum-fetcher-go/repo"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -22,7 +22,7 @@ import (
 	"gorm.io/driver/postgres"
 )
 
-func Setup(t *testing.T, ctx context.Context) (*App, tc.Container, tc.Container) {
+func Setup(t *testing.T, ctx context.Context) (*application.App, tc.Container, tc.Container) {
 	gin.SetMode(gin.TestMode)
 	testDir, err := os.Getwd()
 	if err != nil {
@@ -55,7 +55,7 @@ func Setup(t *testing.T, ctx context.Context) (*App, tc.Container, tc.Container)
 	// time.Sleep(1 * time.Second)
 	postgresDb, err := db.NewDatabse(postgres.Open(connStr))
 	if err != nil {
-		t.Fatalf("error connecting to postgres db")
+		t.Fatalf("error connecting to postgres db: %v", err)
 	}
 
 	// Start the Redis container
@@ -79,12 +79,11 @@ func Setup(t *testing.T, ctx context.Context) (*App, tc.Container, tc.Container)
 	client, err := ethclient.Dial(ethNodeUrl)
 	wsClient, err := ethclient.Dial(wsEthNodeUrl)
 	if err != nil {
-		log.Fatal("error connecting to eth node")
-		panic(err)
+		t.Fatalf("error connecting to eth node: %v", err)
 	}
 
 	// create and start the app
-	app := New(gin.Default(), port, ethNodeUrl, jwtSecret, client, wsClient, postgresDb, l, transactionRepo, contractRepo)
+	app := application.New(gin.Default(), port, ethNodeUrl, jwtSecret, client, wsClient, postgresDb, l, transactionRepo, contractRepo)
 
 	go app.Start()
 	return app, pgC, redisC

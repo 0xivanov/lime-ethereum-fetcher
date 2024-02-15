@@ -5,21 +5,21 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func (app *App) loadRoutes(th *handler.Transaction, uh *handler.User, sch *handler.SmartContract) {
+func (app *App) loadRoutes(transactionHandler *handler.Transaction, userHandler *handler.User, smartContractHandler *handler.SmartContract) {
 
 	// basic endpoint to test if the app is running properly
-	app.r.GET("/ping", func(c *gin.Context) {
+	app.router.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"message": "pong",
 		})
 	})
 
 	// lime endpoints
-	app.r.GET("/lime/all", th.GetTransactions)
-	app.r.GET("/lime/eth", handler.AuthenticateMiddleware(), th.GetTransactionsWithHashes)
-	app.r.GET("/lime/eth/:rlphex", handler.AuthenticateMiddleware(), th.GetTransactionsWithRlp)
-	app.r.POST("/lime/authenticate", uh.Authenticate)
-	app.r.GET("/lime/my", uh.GetUserTransactions)
-	app.r.POST("/lime/savePerson", sch.SavePerson)
-	app.r.GET("/lime/listPersons", sch.GetPersons)
+	app.router.GET("/lime/all", transactionHandler.GetTransactions)
+	app.router.GET("/lime/eth", handler.AuthenticateMiddleware(), transactionHandler.GetTransactions)
+	app.router.GET("/lime/eth/:rlphex", handler.AuthenticateMiddleware(), transactionHandler.GetTransactionsWithRlp)
+	app.router.POST("/lime/authenticate", userHandler.Authenticate)
+	app.router.GET("/lime/my", userHandler.GetUserTransactions)
+	app.router.POST("/lime/savePerson", smartContractHandler.SavePerson)
+	app.router.GET("/lime/listPersons", smartContractHandler.GetPersons)
 }

@@ -34,7 +34,6 @@ func TestFetchTransactionsFromEthereum_Positive(t *testing.T) {
 	result, err := subject.fetchTransactionFromEthereum(transactionHashes)
 	if err != nil {
 		t.Errorf("fetchTransactionsFromEthereum returned error: %v", err)
-		panic(err)
 	}
 	fmt.Println(result)
 }

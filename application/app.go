@@ -17,14 +17,14 @@ import (
 )
 
 type App struct {
-	r             *gin.Engine
-	p             string
-	l             hclog.Logger
-	s             *http.Server
+	router        *gin.Engine
+	port          string
+	logger        hclog.Logger
+	server        *http.Server
 	client        *ethclient.Client
 	wsClient      *ethclient.Client
 	eventListener *EventListener
-	ctx           context.Context // Context for controlling goroutines
+	ctx           context.Context
 	cancelFunc    context.CancelFunc
 }
 
@@ -37,27 +37,28 @@ func New(r *gin.Engine, p string, ethNodeUrl string, jwtSecret string, client *e
 
 func (app *App) Start() {
 	s := http.Server{
-		Addr:         "localhost:" + app.p, // configure the bind address
-		Handler:      app.r,                // set the default handler
-		ReadTimeout:  5 * time.Second,      // max time to read request from the client
-		WriteTimeout: 10 * time.Second,     // max time to write response to the client
-		IdleTimeout:  120 * time.Second,    // max time for connections using TCP Keep-Alive
+		Addr:         "0.0.0.0:" + app.port, // configure the bind address
+		Handler:      app.router,            // set the default handler
+		ReadTimeout:  5 * time.Second,       // max time to read request from the client
+		WriteTimeout: 10 * time.Second,      // max time to write response to the client
+		IdleTimeout:  120 * time.Second,     // max time for connections using TCP Keep-Alive
 	}
-	app.s = &s
+	app.server = &s
 	// start the server
 	go func() {
-		app.l.Info("Starting server on", "port", app.p)
+		app.logger.Info("Starting server on", "port", app.port)
 
 		err := s.ListenAndServe()
 		if err != nil {
-			app.l.Info("Closing server", "error", err)
+			app.logger.Info("Closing server", "error", err)
 		}
 	}()
 
+	// run event listener
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
-				app.l.Error("event listener goroutine panicked", "error", r)
+				app.logger.Error("event listener goroutine panicked", "error", r)
 			}
 		}()
 		app.eventListener.PersonInfoEventListenerStart(app.ctx, app.wsClient)
@@ -81,12 +82,12 @@ func (app *App) Stop() {
 	// Cancel the context to stop all goroutines
 	app.cancelFunc()
 
-	if app.r != nil {
+	if app.router != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		if err := app.s.Shutdown(ctx); err != nil {
-			app.l.Error("Shutdown server", "info", err)
+		if err := app.server.Shutdown(ctx); err != nil {
+			app.logger.Error("Shutdown server", "info", err)
 		}
-		app.l.Info("Server stopped gracefully")
+		app.logger.Info("Server stopped gracefully")
 	}
 }

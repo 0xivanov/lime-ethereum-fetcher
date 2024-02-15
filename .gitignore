@@ -10,6 +10,8 @@ node_modules/
 *.o
 *.a
 mocks/
+api/
+build/
 # Logs and databases
 *.log
 *.sql
