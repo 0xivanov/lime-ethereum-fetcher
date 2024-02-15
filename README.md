@@ -1,36 +1,40 @@
 # Lime ethereum fetcher
 
-### Installation and Setup with Docker
+### Installation and Setup with Docker *docker and golang required*
 
 1. **Clone Repository:**
    ```bash
    git clone https://github.com/0xivanov/lime-ethereum-fetcher.git
    ```
+2. **Install dependencies:**
+   ```bash
+   go mod download
+   ```
 
-2. **Generate Mocks:**
+3. **Generate Mocks:**
    ```bash
    make createMocks
    ```
 
-3. **Generate Contract Binary, ABI and API:**
+4. **Generate Contract Binary, ABI and API:**
    ```bash
    make generateContractApi
    ```
 
-4. **Setup PostgreSQL:**
+5. **Setup PostgreSQL:**
    ```bash
    make postgresPull
    make postgresInit
    make createDb
    ```
 
-5. **Setup Redis:**
+6. **Setup Redis:**
    ```bash
    make redisPull
    make redisInit
    ```
 
-6. **Edit the .env file:**
+7. **Edit the .env file:**
    ```bash
    API_PORT=9090
    ETH_NODE_URL=https://eth-goerli.g.alchemy.com/v2/<your-token>
@@ -41,7 +45,7 @@
    DB_CONNECTION_URL=postgresql://root:password@some-postgres:5433/postgres
    ```
 
-7. **Run the app:**
+8. **Run the app:**
    ```bash
    make limeApiBuild
    make limeApiRun
