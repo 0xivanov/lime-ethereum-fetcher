@@ -19,6 +19,12 @@ redisPull:
 redisInit: 
 	docker run --name some-redis --network some-network redis
 
+limeApiBuild: 
+	docker build --tag lime-api .
+
+limeApiRun: 
+	docker run --name lime-api --network some-network -p 9090:9090 lime-api
+
 createMocks:
 	mockgen -source=repo/transaction.go  -destination=./mocks/transaction_repo_mock.go mock TransactionMock
 	mockgen -source=repo/contract.go  -destination=./mocks/contract_repo_mock.go mock ContractMock
