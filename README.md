@@ -13,11 +13,14 @@
 
 3. **Generate Mocks:**
    ```bash
+   go install github.com/golang/mock/mockgen@v1.6.0
    make createMocks
    ```
 
 4. **Generate Contract Binary, ABI and API:**
    ```bash
+   brew tap ethereum/ethereum
+   brew install solidity
    make generateContractApi
    ```
 
